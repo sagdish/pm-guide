@@ -1,14 +1,18 @@
-from fastapi import FastAPI, APIRouter, Depends
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from bson import ObjectId
 import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -18,39 +22,117 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
+# Security configuration
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production-pm-guide-2024")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_HOURS = 24
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+# Create the main app
 app = FastAPI(title="Product Management Guide API", version="1.0.0")
 
 # Database dependency
 async def get_database():
     return db
 
-# Import routes after setting up dependencies
-from routes.auth_routes import router as auth_router
-from routes.progress_routes import router as progress_router  
-from routes.tools_routes import router as tools_router
+# Auth functions
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
-# Monkey patch the get_database function in route modules
-import routes.auth_routes as auth_module
-import routes.progress_routes as progress_module
-import routes.tools_routes as tools_module
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
-auth_module.get_database = get_database
-progress_module.get_database = get_database
-tools_module.get_database = get_database
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-# Update auth dependency in routes
-from auth import get_current_user
-import auth as auth_module_main
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    if not ObjectId.is_valid(user_id):
+        raise credentials_exception
+        
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if user is None:
+        raise credentials_exception
+    
+    return user
 
-async def get_current_user_with_db(credentials, db=Depends(get_database)):
-    return await get_current_user(credentials, db)
+# Models
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    name: str
 
-# Patch the auth dependency
-auth_module_main.db = db
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
-# Create a router with the /api prefix for legacy routes
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: str
+    created_at: datetime
+    last_login: Optional[datetime] = None
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+class ProgressUpdate(BaseModel):
+    section_id: str
+    module_id: str
+    completed: bool
+
+class AssessmentSubmission(BaseModel):
+    assessment_id: str
+    answers: Dict[str, Any]
+    score: float
+
+class RiceCalculationCreate(BaseModel):
+    feature_name: str
+    reach: float
+    impact: float
+    confidence: float
+    effort: float
+
+# Legacy models
+class StatusCheck(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_name: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class StatusCheckCreate(BaseModel):
+    client_name: str
+
+# Create routers
 api_router = APIRouter(prefix="/api")
+auth_router = APIRouter(prefix="/api/auth", tags=["authentication"])
+progress_router = APIRouter(prefix="/api/progress", tags=["progress"])
+tools_router = APIRouter(prefix="/api/tools", tags=["tools"])
 
 # Define Models for backward compatibility
 class StatusCheck(BaseModel):
