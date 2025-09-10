@@ -10,11 +10,6 @@ from typing import List
 import uuid
 from datetime import datetime
 
-# Import routes
-from routes.auth_routes import router as auth_router
-from routes.progress_routes import router as progress_router
-from routes.tools_routes import router as tools_router
-
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -26,27 +21,36 @@ db = client[os.environ['DB_NAME']]
 # Create the main app without a prefix
 app = FastAPI(title="Product Management Guide API", version="1.0.0")
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
-
 # Database dependency
 async def get_database():
     return db
 
-# Monkey patch the get_database function in route modules
-auth_router.get_database = get_database
-progress_router.get_database = get_database
-tools_router.get_database = get_database
+# Import routes after setting up dependencies
+from routes.auth_routes import router as auth_router
+from routes.progress_routes import router as progress_router  
+from routes.tools_routes import router as tools_router
 
-# Also update the auth module's get_current_user dependency
-from auth import get_current_user as _get_current_user
-async def get_current_user_with_db(credentials=None, db=Depends(get_database)):
-    from fastapi.security import HTTPBearer
-    from fastapi import Depends
-    security = HTTPBearer()
-    if credentials is None:
-        credentials = Depends(security)
-    return await _get_current_user(credentials, db)
+# Monkey patch the get_database function in route modules
+import routes.auth_routes as auth_module
+import routes.progress_routes as progress_module
+import routes.tools_routes as tools_module
+
+auth_module.get_database = get_database
+progress_module.get_database = get_database
+tools_module.get_database = get_database
+
+# Update auth dependency in routes
+from auth import get_current_user
+import auth as auth_module_main
+
+async def get_current_user_with_db(credentials, db=Depends(get_database)):
+    return await get_current_user(credentials, db)
+
+# Patch the auth dependency
+auth_module_main.db = db
+
+# Create a router with the /api prefix for legacy routes
+api_router = APIRouter(prefix="/api")
 
 # Define Models for backward compatibility
 class StatusCheck(BaseModel):
