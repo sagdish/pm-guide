@@ -196,6 +196,11 @@ const ProductSensePage = () => {
           <div className="text-right">
             <div className="text-sm text-slate-600 mb-1">Scenarios Completed</div>
             <Progress value={(Object.keys(selectedAnswers).length / productSenseScenarios.length) * 100} className="w-32" />
+            {existingScore && (
+              <div className="text-xs text-amber-600 mt-1">
+                Previous Score: {existingScore}%
+              </div>
+            )}
           </div>
         </div>
 
