@@ -111,7 +111,7 @@ const PMBasicsPage = () => {
     }
   ];
 
-  const progressPercentage = (completedSections.size / (learningModules.length + pmRoles.length)) * 100;
+  const progressPercentage = (progress.completed_sections.filter(s => s.startsWith('pm-basics')).length / learningModules.length) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
