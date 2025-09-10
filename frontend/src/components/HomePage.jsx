@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { ArrowRight, Target, Users, TrendingUp, Brain, Lightbulb, BarChart3 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useProgress } from '../contexts/ProgressContext';
+import AuthModal from './AuthModal';
+import { ArrowRight, Target, Users, TrendingUp, Brain, Lightbulb, BarChart3, CheckCircle } from 'lucide-react';
 
 const HomePage = () => {
+  const { isAuthenticated, user } = useAuth();
+  const { progress, isModuleCompleted } = useProgress();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const learningPaths = [
     {
       title: "PM Fundamentals",
