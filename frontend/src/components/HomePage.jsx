@@ -119,9 +119,14 @@ const HomePage = () => {
                   <div className={`p-3 rounded-xl ${path.color} text-white transition-all duration-300 group-hover:scale-110`}>
                     {path.icon}
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {path.badge}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {path.badge}
+                    </Badge>
+                    {isAuthenticated && isModuleCompleted(path.path.substring(1)) && (
+                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    )}
+                  </div>
                 </div>
                 <CardTitle className="text-xl font-semibold text-slate-900 group-hover:text-slate-700 transition-colors">
                   {path.title}
@@ -131,15 +136,26 @@ const HomePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <Link to={path.path}>
+                {isAuthenticated ? (
+                  <Link to={path.path}>
+                    <Button 
+                      className="w-full group/btn bg-slate-900 hover:bg-slate-800 text-white transition-all duration-300"
+                      size="sm"
+                    >
+                      {isModuleCompleted(path.path.substring(1)) ? 'Review Module' : 'Start Learning'}
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                    </Button>
+                  </Link>
+                ) : (
                   <Button 
+                    onClick={() => setShowAuthModal(true)}
                     className="w-full group/btn bg-slate-900 hover:bg-slate-800 text-white transition-all duration-300"
                     size="sm"
                   >
                     Start Learning
                     <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-300" />
                   </Button>
-                </Link>
+                )}
               </CardContent>
             </Card>
           ))}
