@@ -4,12 +4,17 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
+import { useProgress } from '../contexts/ProgressContext';
 import { ArrowLeft, Brain, Lightbulb, Users, Star, CheckCircle } from 'lucide-react';
 
 const ProductSensePage = () => {
+  const { submitAssessment, getAssessmentScore, progress } = useProgress();
   const [currentScenario, setCurrentScenario] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
+
+  // Check if user has taken this assessment before
+  const existingScore = getAssessmentScore('product-sense-scenarios');
 
   const productSenseScenarios = [
     {
