@@ -146,14 +146,14 @@ const PMBasicsPage = () => {
                 >
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-3">
-                      {completedSections.has(module.id) ? 
+                      {isSectionCompleted(module.id) ? 
                         <CheckCircle className="w-5 h-5 text-emerald-500" /> : 
                         <Circle className="w-5 h-5 text-slate-400" />
                       }
                       {module.title}
                     </CardTitle>
                     <Badge variant="outline">
-                      {completedSections.has(module.id) ? 'Completed' : 'Not Started'}
+                      {isSectionCompleted(module.id) ? 'Completed' : 'Not Started'}
                     </Badge>
                   </div>
                 </CardHeader>
