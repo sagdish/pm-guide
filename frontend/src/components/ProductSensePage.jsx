@@ -296,7 +296,15 @@ const ProductSensePage = () => {
                   {Object.keys(selectedAnswers).length === productSenseScenarios.length && (
                     <div className="text-center">
                       <Button 
-                        onClick={() => setShowResults(true)}
+                        onClick={async () => {
+                          setShowResults(true);
+                          const score = calculateScore();
+                          try {
+                            await submitAssessment('product-sense-scenarios', selectedAnswers, score);
+                          } catch (error) {
+                            console.error('Failed to submit assessment:', error);
+                          }
+                        }}
                         className="bg-amber-600 hover:bg-amber-700"
                         size="lg"
                       >
