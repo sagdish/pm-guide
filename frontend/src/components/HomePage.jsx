@@ -69,29 +69,45 @@ const HomePage = () => {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center max-w-4xl mx-auto mb-16">
           <h1 className="text-5xl font-bold text-slate-900 mb-6 leading-tight">
-            The Ultimate Guide to
+            {isAuthenticated ? `Welcome back, ${user?.name}!` : 'The Ultimate Guide to'}
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600">
-              Product Management
+              {isAuthenticated ? 'Continue Your Learning Journey' : 'Product Management'}
             </span>
           </h1>
           <p className="text-xl text-slate-600 mb-8 leading-relaxed">
-            Master the art and science of building products that customers love. 
-            From fundamentals to AI-era strategies, become the PM your team needs.
+            {isAuthenticated 
+              ? `You've completed ${Math.round(progress.total_progress || 0)}% of the guide. Keep going!`
+              : 'Master the art and science of building products that customers love. From fundamentals to AI-era strategies, become the PM your team needs.'
+            }
           </p>
-          <div className="flex flex-wrap justify-center gap-4 mb-8">
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              Interactive Learning
-            </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              Real-world Examples
-            </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              AI-Enhanced
-            </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              Framework-Based
-            </Badge>
-          </div>
+          {!isAuthenticated && (
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              <Badge variant="outline" className="px-4 py-2 text-sm">
+                Interactive Learning
+              </Badge>
+              <Badge variant="outline" className="px-4 py-2 text-sm">
+                Real-world Examples
+              </Badge>
+              <Badge variant="outline" className="px-4 py-2 text-sm">
+                AI-Enhanced
+              </Badge>
+              <Badge variant="outline" className="px-4 py-2 text-sm">
+                Framework-Based
+              </Badge>
+            </div>
+          )}
+          {!isAuthenticated && (
+            <div className="mb-8">
+              <Button 
+                onClick={() => setShowAuthModal(true)}
+                size="lg"
+                className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3"
+              >
+                Start Learning for Free
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Learning Paths Grid */}
