@@ -276,6 +276,10 @@ async def get_progress(current_user: dict = Depends(get_current_user)):
             "total_progress": 0.0,
             "last_accessed_module": None
         }
+    else:
+        # Remove MongoDB-specific fields that are not JSON serializable
+        progress.pop("_id", None)
+        progress.pop("user_id", None)
     
     return progress
 
