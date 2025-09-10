@@ -4,20 +4,20 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
+import { useProgress } from '../contexts/ProgressContext';
 import { ArrowLeft, CheckCircle, Circle, Users, Target, Lightbulb, BarChart3, MessageSquare, Cog } from 'lucide-react';
 
 const PMBasicsPage = () => {
-  const [completedSections, setCompletedSections] = useState(new Set());
+  const { updateSectionProgress, isSectionCompleted, progress } = useProgress();
   const [selectedRole, setSelectedRole] = useState(null);
 
-  const toggleSection = (sectionId) => {
-    const newCompleted = new Set(completedSections);
-    if (newCompleted.has(sectionId)) {
-      newCompleted.delete(sectionId);
-    } else {
-      newCompleted.add(sectionId);
+  const toggleSection = async (sectionId) => {
+    const isCompleted = isSectionCompleted(sectionId);
+    try {
+      await updateSectionProgress(sectionId, 'pm-basics', !isCompleted);
+    } catch (error) {
+      console.error('Failed to update progress:', error);
     }
-    setCompletedSections(newCompleted);
   };
 
   const pmRoles = [
