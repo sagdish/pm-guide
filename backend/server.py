@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,6 +10,10 @@ from typing import List
 import uuid
 from datetime import datetime
 
+# Import routes
+from routes.auth_routes import router as auth_router
+from routes.progress_routes import router as progress_router
+from routes.tools_routes import router as tools_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -20,13 +24,31 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(title="Product Management Guide API", version="1.0.0")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# Database dependency
+async def get_database():
+    return db
 
-# Define Models
+# Monkey patch the get_database function in route modules
+auth_router.get_database = get_database
+progress_router.get_database = get_database
+tools_router.get_database = get_database
+
+# Also update the auth module's get_current_user dependency
+from auth import get_current_user as _get_current_user
+async def get_current_user_with_db(credentials=None, db=Depends(get_database)):
+    from fastapi.security import HTTPBearer
+    from fastapi import Depends
+    security = HTTPBearer()
+    if credentials is None:
+        credentials = Depends(security)
+    return await _get_current_user(credentials, db)
+
+# Define Models for backward compatibility
 class StatusCheck(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     client_name: str
@@ -38,7 +60,7 @@ class StatusCheckCreate(BaseModel):
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Product Management Guide API", "version": "1.0.0"}
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
@@ -52,7 +74,10 @@ async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
-# Include the router in the main app
+# Include all routers
+app.include_router(auth_router)
+app.include_router(progress_router)
+app.include_router(tools_router)
 app.include_router(api_router)
 
 app.add_middleware(
