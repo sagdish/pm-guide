@@ -1,0 +1,59 @@
+{
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.9"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/auth/register",
+      "dest": "/api/auth/register.py"
+    },
+    {
+      "src": "/api/auth/login",
+      "dest": "/api/auth/login.py"
+    },
+    {
+      "src": "/api/auth/me",
+      "dest": "/api/auth/me.py"
+    },
+    {
+      "src": "/api/auth/logout",
+      "dest": "/api/auth/logout.py"
+    },
+    {
+      "src": "/api/progress",
+      "dest": "/api/progress/index.py"
+    },
+    {
+      "src": "/api/progress/section",
+      "dest": "/api/progress/section.py"
+    },
+    {
+      "src": "/api/progress/assessment",
+      "dest": "/api/progress/assessment.py"
+    },
+    {
+      "src": "/api/tools/rice-calculation",
+      "dest": "/api/tools/rice-calculation.py"
+    },
+    {
+      "src": "/api/tools/rice-history",
+      "dest": "/api/tools/rice-history.py"
+    },
+    {
+      "src": "/api/tools/user-story",
+      "dest": "/api/tools/user-story.py"
+    }
+  ],
+  "env": {
+    "MONGO_URL": "@mongo_url",
+    "DB_NAME": "@db_name",
+    "SECRET_KEY": "@secret_key"
+  },
+  "build": {
+    "env": {
+      "REACT_APP_BACKEND_URL": ""
+    }
+  }
+}
