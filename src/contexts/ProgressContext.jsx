@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import { USE_FRONTEND_ONLY } from '../config/appMode';
 
 const ProgressContext = createContext();
 
@@ -45,8 +46,17 @@ export const ProgressProvider = ({ children }) => {
   const loadProgress = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/progress`);
-      setProgress(response.data);
+      if (USE_FRONTEND_ONLY) {
+        // Load from localStorage
+        const savedProgress = localStorage.getItem(`pm_guide_progress_${user?.id}`);
+        if (savedProgress) {
+          setProgress(JSON.parse(savedProgress));
+        }
+      } else {
+        // Load from backend
+        const response = await axios.get(`${API}/progress`);
+        setProgress(response.data);
+      }
     } catch (error) {
       console.error('Failed to load progress:', error);
       // Use default progress if API fails
@@ -70,17 +80,21 @@ export const ProgressProvider = ({ children }) => {
   };
 
   const updateSectionProgress = async (sectionId, moduleId, completed) => {
-    if (!isAuthenticated) {
-      // For non-authenticated users, just update local state
+    if (!user) return;
+
+    if (USE_FRONTEND_ONLY) {
+      // Update progress locally
       setProgress(prev => {
-        const newCompletedSections = [...prev.completed_sections];
-        if (completed && !newCompletedSections.includes(sectionId)) {
-          newCompletedSections.push(sectionId);
-        } else if (!completed && newCompletedSections.includes(sectionId)) {
-          const index = newCompletedSections.indexOf(sectionId);
-          newCompletedSections.splice(index, 1);
+        const sectionKey = `${moduleId}-${sectionId}`;
+        let newCompletedSections = [...prev.completed_sections];
+        
+        if (completed && !newCompletedSections.includes(sectionKey)) {
+          newCompletedSections.push(sectionKey);
+        } else if (!completed) {
+          newCompletedSections = newCompletedSections.filter(s => s !== sectionKey);
         }
 
+        // Update module progress
         const newModuleProgress = { ...prev.module_progress };
         if (!newModuleProgress[moduleId]) {
           newModuleProgress[moduleId] = { completed: false, completed_at: null };
@@ -95,66 +109,92 @@ export const ProgressProvider = ({ children }) => {
         const completedModules = Object.values(newModuleProgress).filter(m => m.completed).length;
         const totalProgress = (completedModules / totalModules) * 100;
 
-        return {
+        const newProgress = {
           ...prev,
           completed_sections: newCompletedSections,
           module_progress: newModuleProgress,
           total_progress: totalProgress,
           last_accessed_module: moduleId
         };
+
+        // Save to localStorage
+        localStorage.setItem(`pm_guide_progress_${user.id}`, JSON.stringify(newProgress));
+        
+        return newProgress;
       });
       return;
-    }
+    } else {
+      // Backend mode
+      try {
+        const response = await axios.post(`${API}/progress/section`, {
+          section_id: sectionId,
+          module_id: moduleId,
+          completed
+        });
 
-    try {
-      const response = await axios.post(`${API}/progress/section`, {
-        section_id: sectionId,
-        module_id: moduleId,
-        completed
-      });
-
-      // Reload progress to get updated data
-      await loadProgress();
-      
-      return response.data;
-    } catch (error) {
-      console.error('Failed to update progress:', error);
-      throw error;
+        // Reload progress to get updated data
+        await loadProgress();
+        
+        return response.data;
+      } catch (error) {
+        console.error('Failed to update progress:', error);
+        throw error;
+      }
     }
   };
 
-  const submitAssessment = async (assessmentId, answers, score) => {
-    if (!isAuthenticated) {
-      // For non-authenticated users, just update local state
-      setProgress(prev => ({
-        ...prev,
-        assessment_scores: [
-          ...prev.assessment_scores,
-          {
-            assessment_id: assessmentId,
-            score,
-            answers,
-            completed_at: new Date().toISOString()
-          }
-        ]
-      }));
-      return;
-    }
+    const submitAssessment = async (assessmentId, answers, score) => {
+    if (!user) return;
 
-    try {
-      const response = await axios.post(`${API}/progress/assessment`, {
-        assessment_id: assessmentId,
-        answers,
-        score
+    if (USE_FRONTEND_ONLY) {
+      // Update assessment locally
+      setProgress(prev => {
+        const newAssessmentScores = [...prev.assessment_scores];
+        const existingIndex = newAssessmentScores.findIndex(
+          assessment => assessment.assessment_id === assessmentId
+        );
+
+        const assessmentResult = {
+          assessment_id: assessmentId,
+          answers,
+          score,
+          completed_at: new Date().toISOString()
+        };
+
+        if (existingIndex >= 0) {
+          newAssessmentScores[existingIndex] = assessmentResult;
+        } else {
+          newAssessmentScores.push(assessmentResult);
+        }
+
+        const newProgress = {
+          ...prev,
+          assessment_scores: newAssessmentScores
+        };
+
+        // Save to localStorage
+        localStorage.setItem(`pm_guide_progress_${user.id}`, JSON.stringify(newProgress));
+        
+        return newProgress;
       });
+      return;
+    } else {
+      // Backend mode
+      try {
+        const response = await axios.post(`${API}/progress/assessment`, {
+          assessment_id: assessmentId,
+          answers,
+          score
+        });
 
-      // Reload progress to get updated data
-      await loadProgress();
-      
-      return response.data;
-    } catch (error) {
-      console.error('Failed to submit assessment:', error);
-      throw error;
+        // Reload progress to get updated data
+        await loadProgress();
+        
+        return response.data;
+      } catch (error) {
+        console.error('Failed to submit assessment:', error);
+        throw error;
+      }
     }
   };
 
