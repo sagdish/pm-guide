@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -12,7 +12,16 @@ const HomePage = () => {
   const { isAuthenticated, user } = useAuth();
   const { progress, isModuleCompleted } = useProgress();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [allowBrowseWithoutAuth, setAllowBrowseWithoutAuth] = useState(false);
+  const [pendingDestination, setPendingDestination] = useState(null);
+  const navigate = useNavigate();
+
+  // Check for browse mode on component mount
+  useEffect(() => {
+    const browseMode = sessionStorage.getItem('pm_guide_browse_mode');
+    if (browseMode === 'true') {
+      // User is in browse mode, don't show auth modal
+    }
+  }, []);
   const learningPaths = [
     {
       title: "PM Fundamentals",
@@ -137,7 +146,7 @@ const HomePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                {isAuthenticated || allowBrowseWithoutAuth ? (
+                {isAuthenticated || sessionStorage.getItem('pm_guide_browse_mode') === 'true' ? (
                   <Link to={path.path}>
                     <Button 
                       className="w-full group/btn bg-slate-900 hover:bg-slate-800 text-white transition-all duration-300"
@@ -149,7 +158,10 @@ const HomePage = () => {
                   </Link>
                 ) : (
                   <Button 
-                    onClick={() => setShowAuthModal(true)}
+                    onClick={() => {
+                      setPendingDestination(path.path);
+                      setShowAuthModal(true);
+                    }}
                     className="w-full group/btn bg-slate-900 hover:bg-slate-800 text-white transition-all duration-300"
                     size="sm"
                   >
@@ -187,10 +199,17 @@ const HomePage = () => {
 
       <AuthModal 
         isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)}
-        onBrowseWithoutAuth={() => {
-          setAllowBrowseWithoutAuth(true);
+        onClose={() => {
           setShowAuthModal(false);
+          setPendingDestination(null);
+        }}
+        onBrowseWithoutAuth={() => {
+          sessionStorage.setItem('pm_guide_browse_mode', 'true');
+          setShowAuthModal(false);
+          if (pendingDestination) {
+            navigate(pendingDestination);
+            setPendingDestination(null);
+          }
         }}
       />
     </div>

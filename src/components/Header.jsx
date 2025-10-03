@@ -55,12 +55,14 @@ const Header = () => {
                   </Button>
                 </div>
               ) : (
-                <Button
-                  onClick={() => setShowAuthModal(true)}
-                  className="bg-slate-900 hover:bg-slate-800"
-                >
-                  Login / Sign Up
-                </Button>
+                sessionStorage.getItem('pm_guide_browse_mode') !== 'true' && (
+                  <Button
+                    onClick={() => setShowAuthModal(true)}
+                    className="bg-slate-900 hover:bg-slate-800"
+                  >
+                    Login / Sign Up
+                  </Button>
+                )
               )}
             </div>
           </div>
@@ -70,7 +72,10 @@ const Header = () => {
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)}
-        onBrowseWithoutAuth={() => setShowAuthModal(false)}
+        onBrowseWithoutAuth={() => {
+          sessionStorage.setItem('pm_guide_browse_mode', 'true');
+          setShowAuthModal(false);
+        }}
       />
     </>
   );
